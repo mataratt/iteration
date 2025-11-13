@@ -126,3 +126,167 @@ mean_and_sd(x_vec)
     ##    mean    sd
     ##   <dbl> <dbl>
     ## 1  10.7  3.20
+
+## Make up data…
+
+Let’s *simulate* some data
+
+``` r
+sim_df =
+  tibble(
+    x = rnorm(n = 30, mean = 5, sd = 2)
+  )
+
+sim_df |> 
+  summarize(
+    mu_hat = mean(x),
+    sigma_hat = sd(x)
+  )
+```
+
+    ## # A tibble: 1 × 2
+    ##   mu_hat sigma_hat
+    ##    <dbl>     <dbl>
+    ## 1   4.95      2.26
+
+Write a function to do simulations.
+
+The inputs are
+
+- `n_subj` is number of subjects
+- `mu` is the true mean
+- `sigma` is the true sd
+
+Function simulates data from a normal and computes sample mean and sd.
+
+(We wrote this in a code chunk last time; now it’s being sourced.)
+
+``` r
+source("source/sim_mean_sd.R")
+```
+
+Let’s run this function.
+
+``` r
+sim_mean_sd(mu = 48.4)
+```
+
+    ## # A tibble: 1 × 2
+    ##   mu_hat sigma_hat
+    ##    <dbl>     <dbl>
+    ## 1   48.7      1.98
+
+``` r
+sim_mean_sd(n_subj = 3800)
+```
+
+    ## # A tibble: 1 × 2
+    ##   mu_hat sigma_hat
+    ##    <dbl>     <dbl>
+    ## 1   3.00      2.08
+
+Import the LoTR data
+
+``` r
+fellowship_ring =
+  read_excel("data/LotR_Words.xlsx", range = "B3:D6") |> 
+  mutate(movie = "Fellowship of the Ring")
+
+two_towers =
+  read_excel("data/LotR_Words.xlsx", range = "F3:H6") |> 
+  mutate(movie = "Two Towers")
+
+return_of_the_king =
+  read_excel("data/LotR_Words.xlsx", range = "J3:L6") |> 
+  mutate(movie = "Return of the King")
+
+lotr_df =
+  bind_rows(fellowship_ring, two_towers, return_of_the_king)
+```
+
+Turn this into a function
+
+``` r
+lotr_import = function(cell_range, movie_title) {
+  
+  df =
+    read_excel("data/LotR_Words.xlsx", range = cell_range) |> 
+    mutate(movie = movie_title)
+
+  df
+  
+}
+
+fellowship = lotr_import(cell_range = "B3:D6", movie_title = "Fellowship")
+two_towers = lotr_import(cell_range = "F3:H6", movie_title = "Two Towers")
+return = lotr_import(cell_range = "J3:L6", movie_title = "Return")
+
+bind_rows(fellowship, two_towers, return)
+```
+
+    ## # A tibble: 9 × 4
+    ##   Race   Female  Male movie     
+    ##   <chr>   <dbl> <dbl> <chr>     
+    ## 1 Elf      1229   971 Fellowship
+    ## 2 Hobbit     14  3644 Fellowship
+    ## 3 Man         0  1995 Fellowship
+    ## 4 Elf       331   513 Two Towers
+    ## 5 Hobbit      0  2463 Two Towers
+    ## 6 Man       401  3589 Two Towers
+    ## 7 Elf       183   510 Return    
+    ## 8 Hobbit      2  2673 Return    
+    ## 9 Man       268  2459 Return
+
+Look at one more example
+
+``` r
+nsduh_url = "http://samhda.s3-us-gov-west-1.amazonaws.com/s3fs-public/field-uploads/2k15StateFiles/NSDUHsaeShortTermCHG2015.htm"
+
+nsduh_html = read_html(nsduh_url)
+
+data_marj = 
+  nsduh_html |> 
+  html_table() |> 
+  nth(1) |>
+  slice(-1) |> 
+  select(-contains("P Value")) |>
+  pivot_longer(
+    -State,
+    names_to = "age_year", 
+    values_to = "percent") |>
+  separate(age_year, into = c("age", "year"), sep = "\\(") |>
+  mutate(
+    year = str_replace(year, "\\)", ""),
+    percent = str_replace(percent, "[a-c]$", ""),
+    percent = as.numeric(percent)) |>
+  filter(!(State %in% c("Total U.S.", "Northeast", "Midwest", "South", "West")))
+```
+
+Write an import function
+
+``` r
+nsduh_import = function(html, table_num) {
+  
+  data = 
+    html |> 
+    html_table() |> 
+    nth(table_num) |>
+    slice(-1) |> 
+    select(-contains("P Value")) |>
+    pivot_longer(
+      -State,
+      names_to = "age_year", 
+      values_to = "percent") |>
+    separate(age_year, into = c("age", "year"), sep = "\\(") |>
+    mutate(
+      year = str_replace(year, "\\)", ""),
+      percent = str_replace(percent, "[a-c]$", ""),
+      percent = as.numeric(percent)) |>
+    filter(!(State %in% c("Total U.S.", "Northeast", "Midwest", "South", "West")))
+  
+}
+
+nsduh_import(nsduh_html, table_num = 1)
+nsduh_import(nsduh_html, table_num = 2)
+nsduh_import(nsduh_html, table_num = 3)
+```
